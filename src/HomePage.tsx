@@ -121,14 +121,26 @@ export default function HomePage() {
         </Link>
       </header>
 
-      {/* Hero - shows the poster art */}
+      {/* Hero banner */}
       <section className="relative px-4 pt-2 pb-6 flex justify-center">
-        <div className="w-full max-w-5xl rounded-3xl overflow-hidden border-2 border-islam-gold/40 shadow-[0_10px_60px_rgba(0,0,0,0.5)]">
-          <img
-            src="/halalbihalal-bg.jpg"
-            alt="Halal Bi Halal — Healing Renewing Winning"
-            className="w-full h-auto block"
+        <div className="w-full max-w-5xl rounded-3xl overflow-hidden border-2 border-islam-gold/40 shadow-[0_10px_60px_rgba(0,0,0,0.5)] bg-gradient-to-br from-islam-deep via-islam-green to-islam-mid p-8 sm:p-12 text-center relative">
+          <div
+            className="absolute inset-0 opacity-20"
+            style={{
+              background:
+                "radial-gradient(circle at 30% 20%, rgba(240,198,74,0.5), transparent 50%), radial-gradient(circle at 70% 80%, rgba(123,61,168,0.5), transparent 50%)",
+            }}
+            aria-hidden
           />
+          <div className="relative z-10">
+            <div className="text-islam-gold text-3xl mb-3">🌙</div>
+            <h2 className="font-display text-2xl sm:text-4xl font-bold text-islam-cream drop-shadow-lg">
+              Halal Bi Halal
+            </h2>
+            <div className="mt-2 text-sm sm:text-base uppercase tracking-[0.4em] text-islam-gold/90 font-display">
+              Healing &bull; Renewing &bull; Winning
+            </div>
+          </div>
         </div>
       </section>
 
