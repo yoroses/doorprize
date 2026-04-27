@@ -25,7 +25,6 @@ export default function HomePage() {
   const [poolEmpty, setPoolEmpty] = useState(false);
   const intervalRef = useRef<number | null>(null);
 
-  // Refresh from storage when window regains focus (admin may have changed it)
   useEffect(() => {
     const onFocus = () => {
       setSettings(loadSettings());
@@ -76,7 +75,6 @@ export default function HomePage() {
         setHistory(next);
         saveHistory(next);
       } else {
-        // Show a fast random ticker
         const min = settings.minNumber;
         const max = settings.maxNumber;
         const n = Math.floor(Math.random() * (max - min + 1)) + min;
@@ -95,37 +93,69 @@ export default function HomePage() {
   const formatted = (n: number) => String(n).padStart(padWidth, "0");
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 text-white flex flex-col">
-      <header className="flex items-center justify-between px-6 py-4">
-        <div className="text-lg font-semibold tracking-wide opacity-90">
-          🎉 {settings.prizeTitle}
+    <div className="min-h-screen relative text-islam-cream">
+      {/* Background image - full page, fixed, with dark overlay */}
+      <div
+        className="fixed inset-0 -z-10 bg-cover bg-center"
+        style={{ backgroundImage: "url('/halalbihalal-bg.jpg')" }}
+        aria-hidden
+      />
+      <div className="fixed inset-0 -z-10 bg-gradient-to-b from-islam-deep/70 via-islam-deep/40 to-islam-deep/90" aria-hidden />
+
+      {/* Header */}
+      <header className="relative flex items-center justify-between px-6 py-4">
+        <div className="font-display font-bold text-islam-cream text-lg tracking-wide drop-shadow">
+          🌙 {settings.prizeTitle}
         </div>
         <Link
           to="/admin"
-          className="text-xs uppercase tracking-widest opacity-60 hover:opacity-100 transition"
+          className="text-xs uppercase tracking-[0.3em] text-islam-cream/70 hover:text-islam-gold transition"
         >
           Admin
         </Link>
       </header>
 
-      <main className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-        <div className="mb-3 text-sm uppercase tracking-[0.4em] opacity-70">
+      {/* Hero - shows the poster art */}
+      <section className="relative px-4 pt-2 pb-6 flex justify-center">
+        <div className="w-full max-w-5xl rounded-3xl overflow-hidden border-2 border-islam-gold/40 shadow-[0_10px_60px_rgba(0,0,0,0.5)]">
+          <img
+            src="/halalbihalal-bg.jpg"
+            alt="Halal Bi Halal — Healing Renewing Winning"
+            className="w-full h-auto block"
+          />
+        </div>
+      </section>
+
+      {/* Door prize card */}
+      <main className="relative px-4 pb-6 flex flex-col items-center text-center">
+        <div className="text-[10px] sm:text-xs uppercase tracking-[0.5em] text-islam-gold mb-2">
+          ✦ Door Prize ✦
+        </div>
+        <div className="text-sm uppercase tracking-[0.3em] text-islam-cream/80 mb-4">
           Range {settings.minNumber} – {settings.maxNumber}
         </div>
 
         <div
-          className={`relative my-6 px-10 py-8 rounded-3xl bg-white/10 backdrop-blur border border-white/20 shadow-2xl ${
-            spinning ? "ring-4 ring-yellow-300/40" : ""
-          }`}
+          className={`relative my-2 px-10 py-8 rounded-3xl bg-islam-deep/80 backdrop-blur border-2 ${
+            spinning ? "border-islam-gold animate-pulse" : "border-islam-gold/60"
+          } shadow-[0_10px_40px_rgba(0,0,0,0.5)]`}
         >
+          {/* corner ornaments */}
+          <span className="absolute -top-3 -left-3 text-2xl text-islam-purple drop-shadow">✿</span>
+          <span className="absolute -top-3 -right-3 text-2xl text-islam-gold drop-shadow">✦</span>
+          <span className="absolute -bottom-3 -left-3 text-2xl text-islam-gold drop-shadow">✦</span>
+          <span className="absolute -bottom-3 -right-3 text-2xl text-islam-purple drop-shadow">✿</span>
+
           <div
-            className={`font-mono font-black tabular-nums leading-none select-none ${
-              spinning ? "text-yellow-200" : "text-white"
+            className={`font-display font-black tabular-nums leading-none select-none ${
+              spinning ? "text-islam-gold" : "text-islam-cream"
             }`}
             style={{
-              fontSize: "clamp(4rem, 18vw, 12rem)",
+              fontSize: "clamp(4rem, 16vw, 11rem)",
               letterSpacing: "0.05em",
-              textShadow: "0 6px 30px rgba(0,0,0,0.4)",
+              textShadow:
+                "0 4px 0 rgba(0,0,0,0.35), 0 0 30px rgba(240,198,74,0.45)",
+              WebkitTextStroke: "2px rgba(0,0,0,0.45)",
             }}
           >
             {display == null ? "—".padEnd(padWidth, "—") : formatted(display)}
@@ -133,7 +163,7 @@ export default function HomePage() {
         </div>
 
         {poolEmpty && (
-          <div className="text-yellow-200 text-sm mb-3">
+          <div className="text-islam-gold text-sm mt-3">
             Semua angka dalam range sudah keluar. Reset history di admin panel.
           </div>
         )}
@@ -141,41 +171,46 @@ export default function HomePage() {
         <button
           onClick={handleDraw}
           disabled={spinning || remaining === 0}
-          className="mt-2 px-10 py-4 rounded-full bg-gradient-to-r from-pink-500 to-yellow-400 text-slate-900 font-bold uppercase tracking-widest text-lg shadow-lg hover:scale-105 active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
+          className="mt-6 px-12 py-4 rounded-full bg-gradient-to-r from-islam-gold to-islam-goldDark text-islam-deep font-display font-bold uppercase tracking-[0.25em] text-lg shadow-[0_8px_24px_rgba(0,0,0,0.4)] hover:scale-105 active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 border-2 border-islam-cream/30"
         >
           {spinning ? "Mengundi..." : "Draw"}
         </button>
 
-        <div className="mt-4 text-xs opacity-70">
+        <div className="mt-3 text-xs uppercase tracking-[0.3em] text-islam-cream/70">
           {settings.excludePrevious
             ? `${remaining} / ${totalInRange} angka tersisa`
             : `Mode: angka boleh berulang`}
         </div>
       </main>
 
-      <section className="px-6 pb-8">
-        <div className="max-w-3xl mx-auto bg-white/5 border border-white/10 rounded-2xl p-4">
+      {/* History */}
+      <section className="relative px-4 pb-12">
+        <div className="max-w-4xl mx-auto bg-islam-deep/70 backdrop-blur border-2 border-islam-gold/30 rounded-2xl p-5">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm uppercase tracking-widest opacity-70">
-              History Pemenang
+            <h2 className="font-display text-base uppercase tracking-[0.3em] text-islam-gold">
+              ✦ Pemenang ✦
             </h2>
-            <span className="text-xs opacity-60">{history.length} draws</span>
+            <span className="text-xs text-islam-cream/70">{history.length} draws</span>
           </div>
           {history.length === 0 ? (
-            <div className="text-sm opacity-60 py-4 text-center">
+            <div className="text-sm text-islam-cream/70 py-6 text-center italic">
               Belum ada pemenang. Tekan Draw untuk mulai.
             </div>
           ) : (
-            <ol className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 max-h-48 overflow-y-auto">
+            <ol className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-7 gap-2 max-h-56 overflow-y-auto pr-1">
               {history.map((h, i) => (
                 <li
                   key={`${h.timestamp}-${i}`}
-                  className="bg-white/10 rounded-lg px-2 py-2 flex flex-col items-center"
+                  className={`rounded-xl px-2 py-2 flex flex-col items-center border ${
+                    i === 0
+                      ? "bg-islam-gold text-islam-deep border-islam-cream"
+                      : "bg-islam-deep/80 text-islam-cream border-islam-gold/30"
+                  }`}
                 >
-                  <span className="font-mono font-bold text-lg">
+                  <span className="font-display font-bold text-lg">
                     {String(h.number).padStart(padWidth, "0")}
                   </span>
-                  <span className="text-[10px] opacity-60">
+                  <span className="text-[10px] opacity-70">
                     {new Date(h.timestamp).toLocaleTimeString()}
                   </span>
                 </li>
@@ -184,6 +219,10 @@ export default function HomePage() {
           )}
         </div>
       </section>
+
+      <footer className="relative pb-6 text-center text-xs text-islam-cream/50 tracking-widest">
+        Healing • Renewing • Winning
+      </footer>
     </div>
   );
 }

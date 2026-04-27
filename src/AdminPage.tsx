@@ -93,60 +93,75 @@ export default function AdminPage() {
     }
   }
 
+  // Shared backdrop wrapper
+  const Bg = ({ children }: { children: React.ReactNode }) => (
+    <div className="min-h-screen relative text-islam-cream">
+      <div
+        className="fixed inset-0 -z-10 bg-cover bg-center"
+        style={{ backgroundImage: "url('/halalbihalal-bg.jpg')" }}
+        aria-hidden
+      />
+      <div className="fixed inset-0 -z-10 bg-islam-deep/85" aria-hidden />
+      {children}
+    </div>
+  );
+
   if (!authed) {
     return (
-      <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center px-4">
-        <form
-          onSubmit={handleLogin}
-          className="w-full max-w-sm bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4"
-        >
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold">Admin Login</h1>
-            <Link to="/" className="text-xs opacity-60 hover:opacity-100">
-              ← Kembali
-            </Link>
-          </div>
-          <label className="block text-sm">
-            <span className="opacity-80">Password</span>
-            <input
-              type="password"
-              autoFocus
-              value={pwInput}
-              onChange={(e) => setPwInput(e.target.value)}
-              className="mt-1 w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/10 focus:outline-none focus:border-indigo-400"
-              placeholder="Masukkan password admin"
-            />
-          </label>
-          {pwError && <div className="text-red-400 text-sm">{pwError}</div>}
-          <button
-            type="submit"
-            className="w-full py-2 rounded-lg bg-indigo-500 hover:bg-indigo-400 font-semibold"
+      <Bg>
+        <div className="min-h-screen flex items-center justify-center px-4">
+          <form
+            onSubmit={handleLogin}
+            className="w-full max-w-sm bg-islam-deep/80 backdrop-blur border-2 border-islam-gold/40 rounded-2xl p-6 space-y-4 shadow-[0_10px_40px_rgba(0,0,0,0.5)]"
           >
-            Login
-          </button>
-          <p className="text-[11px] opacity-50">
-            Default password: <code>admin123</code> (ganti setelah login).
-          </p>
-        </form>
-      </div>
+            <div className="flex items-center justify-between">
+              <h1 className="font-display text-xl font-bold text-islam-gold">Admin Login</h1>
+              <Link to="/" className="text-xs text-islam-cream/60 hover:text-islam-gold uppercase tracking-widest">
+                ← Kembali
+              </Link>
+            </div>
+            <label className="block text-sm">
+              <span className="text-islam-cream/80">Password</span>
+              <input
+                type="password"
+                autoFocus
+                value={pwInput}
+                onChange={(e) => setPwInput(e.target.value)}
+                className="mt-1 w-full px-3 py-2 rounded-lg bg-islam-deep border border-islam-gold/30 focus:outline-none focus:border-islam-gold text-islam-cream"
+                placeholder="Masukkan password admin"
+              />
+            </label>
+            {pwError && <div className="text-red-300 text-sm">{pwError}</div>}
+            <button
+              type="submit"
+              className="w-full py-2 rounded-lg bg-gradient-to-r from-islam-gold to-islam-goldDark text-islam-deep font-display font-bold uppercase tracking-widest"
+            >
+              Login
+            </button>
+            <p className="text-[11px] text-islam-cream/50">
+              Default password: <code className="text-islam-gold">admin123</code> (ganti setelah login).
+            </p>
+          </form>
+        </div>
+      </Bg>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white">
-      <header className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+    <Bg>
+      <header className="flex items-center justify-between px-6 py-4 border-b border-islam-gold/20">
         <div className="flex items-center gap-3">
-          <h1 className="text-lg font-semibold">Admin Panel</h1>
+          <h1 className="font-display text-lg font-bold text-islam-gold">Admin Panel</h1>
           <Link
             to="/"
-            className="text-xs uppercase tracking-widest opacity-60 hover:opacity-100"
+            className="text-xs uppercase tracking-[0.3em] text-islam-cream/60 hover:text-islam-gold"
           >
             ← Door Prize
           </Link>
         </div>
         <button
           onClick={handleLogout}
-          className="text-xs uppercase tracking-widest opacity-60 hover:opacity-100"
+          className="text-xs uppercase tracking-[0.3em] text-islam-cream/60 hover:text-islam-gold"
         >
           Logout
         </button>
@@ -155,27 +170,27 @@ export default function AdminPage() {
       <main className="max-w-2xl mx-auto px-6 py-8">
         <form
           onSubmit={handleSave}
-          className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-5"
+          className="bg-islam-deep/80 backdrop-blur border-2 border-islam-gold/40 rounded-2xl p-6 space-y-5 shadow-[0_10px_40px_rgba(0,0,0,0.5)]"
         >
-          <h2 className="text-sm uppercase tracking-widest opacity-70">
+          <h2 className="font-display text-sm uppercase tracking-[0.3em] text-islam-gold">
             Pengaturan Door Prize
           </h2>
 
           <label className="block text-sm">
-            <span className="opacity-80">Judul</span>
+            <span className="text-islam-cream/80">Judul</span>
             <input
               type="text"
               value={settings.prizeTitle}
               onChange={(e) =>
                 setSettings({ ...settings, prizeTitle: e.target.value })
               }
-              className="mt-1 w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/10 focus:outline-none focus:border-indigo-400"
+              className="mt-1 w-full px-3 py-2 rounded-lg bg-islam-deep border border-islam-gold/30 focus:outline-none focus:border-islam-gold text-islam-cream"
             />
           </label>
 
           <div className="grid grid-cols-2 gap-4">
             <label className="block text-sm">
-              <span className="opacity-80">Angka minimum</span>
+              <span className="text-islam-cream/80">Angka minimum</span>
               <input
                 type="number"
                 value={settings.minNumber}
@@ -185,11 +200,11 @@ export default function AdminPage() {
                     minNumber: Number(e.target.value),
                   })
                 }
-                className="mt-1 w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/10 focus:outline-none focus:border-indigo-400"
+                className="mt-1 w-full px-3 py-2 rounded-lg bg-islam-deep border border-islam-gold/30 focus:outline-none focus:border-islam-gold text-islam-cream"
               />
             </label>
             <label className="block text-sm">
-              <span className="opacity-80">Angka maksimum</span>
+              <span className="text-islam-cream/80">Angka maksimum</span>
               <input
                 type="number"
                 value={settings.maxNumber}
@@ -199,19 +214,19 @@ export default function AdminPage() {
                     maxNumber: Number(e.target.value),
                   })
                 }
-                className="mt-1 w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/10 focus:outline-none focus:border-indigo-400"
+                className="mt-1 w-full px-3 py-2 rounded-lg bg-islam-deep border border-islam-gold/30 focus:outline-none focus:border-islam-gold text-islam-cream"
               />
             </label>
           </div>
 
-          <label className="flex items-center gap-3 text-sm cursor-pointer select-none">
+          <label className="flex items-center gap-3 text-sm cursor-pointer select-none text-islam-cream/90">
             <input
               type="checkbox"
               checked={settings.excludePrevious}
               onChange={(e) =>
                 setSettings({ ...settings, excludePrevious: e.target.checked })
               }
-              className="h-4 w-4 accent-indigo-400"
+              className="h-4 w-4 accent-islam-gold"
             />
             <span>
               Jangan ulang angka yang sudah keluar (eksklusi history pemenang)
@@ -219,71 +234,71 @@ export default function AdminPage() {
           </label>
 
           <label className="block text-sm">
-            <span className="opacity-80">Password admin</span>
+            <span className="text-islam-cream/80">Password admin</span>
             <input
               type="text"
               value={settings.adminPassword}
               onChange={(e) =>
                 setSettings({ ...settings, adminPassword: e.target.value })
               }
-              className="mt-1 w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/10 focus:outline-none focus:border-indigo-400 font-mono"
+              className="mt-1 w-full px-3 py-2 rounded-lg bg-islam-deep border border-islam-gold/30 focus:outline-none focus:border-islam-gold font-mono text-islam-cream"
             />
-            <span className="block text-[11px] opacity-50 mt-1">
+            <span className="block text-[11px] text-islam-cream/50 mt-1">
               Disimpan di localStorage browser ini saja.
             </span>
           </label>
 
           {error && (
-            <div className="text-red-400 text-sm bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
+            <div className="text-red-300 text-sm bg-red-900/30 border border-red-500/30 rounded-lg px-3 py-2">
               {error}
             </div>
           )}
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <button
               type="submit"
-              className="px-5 py-2 rounded-lg bg-indigo-500 hover:bg-indigo-400 font-semibold"
+              className="px-5 py-2 rounded-lg bg-gradient-to-r from-islam-gold to-islam-goldDark text-islam-deep font-display font-bold uppercase tracking-widest"
             >
               Simpan
             </button>
             <button
               type="button"
               onClick={() => navigate("/")}
-              className="px-5 py-2 rounded-lg bg-white/10 hover:bg-white/20"
+              className="px-5 py-2 rounded-lg bg-islam-cream/10 hover:bg-islam-cream/20 text-islam-cream"
             >
               Lihat Door Prize
             </button>
             {savedAt && (
-              <span className="text-xs opacity-60">
+              <span className="text-xs text-islam-cream/60">
                 Tersimpan {new Date(savedAt).toLocaleTimeString()}
               </span>
             )}
           </div>
         </form>
 
-        <div className="mt-6 bg-white/5 border border-white/10 rounded-2xl p-6 space-y-3">
-          <h2 className="text-sm uppercase tracking-widest opacity-70">
+        <div className="mt-6 bg-islam-deep/80 backdrop-blur border-2 border-islam-gold/40 rounded-2xl p-6 space-y-3 shadow-[0_10px_40px_rgba(0,0,0,0.5)]">
+          <h2 className="font-display text-sm uppercase tracking-[0.3em] text-islam-gold">
             History
           </h2>
-          <div className="text-sm opacity-80">
+          <div className="text-sm text-islam-cream/80">
             {historyCount} pemenang tersimpan.
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <button
               onClick={handleResetHistory}
-              className="px-4 py-2 rounded-lg bg-red-500/80 hover:bg-red-500 text-sm"
+              className="px-4 py-2 rounded-lg bg-islam-purple/80 hover:bg-islam-purple text-islam-cream text-sm font-semibold"
             >
               Hapus semua history
             </button>
             <button
               onClick={handleResetDefaults}
-              className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-sm"
+              className="px-4 py-2 rounded-lg bg-islam-cream/10 hover:bg-islam-cream/20 text-islam-cream text-sm"
             >
               Reset ke default
             </button>
           </div>
         </div>
       </main>
-    </div>
+    </Bg>
   );
 }

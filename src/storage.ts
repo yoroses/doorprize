@@ -18,7 +18,7 @@ export const DEFAULT_SETTINGS: DoorPrizeSettings = {
   minNumber: 1,
   maxNumber: 500,
   excludePrevious: true,
-  prizeTitle: "Door Prize",
+  prizeTitle: "Halal Bi Halal Door Prize",
   adminPassword: "admin123",
 };
 
