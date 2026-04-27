@@ -97,11 +97,17 @@ export default function AdminPage() {
   const Bg = ({ children }: { children: React.ReactNode }) => (
     <div className="min-h-screen relative text-islam-cream">
       <div
-        className="fixed inset-0 -z-10 bg-cover bg-center"
-        style={{ backgroundImage: "url('/halalbihalal-bg.jpg')" }}
+        className="fixed inset-0 -z-10 bg-gradient-to-br from-islam-deep via-islam-green to-islam-mid"
         aria-hidden
       />
-      <div className="fixed inset-0 -z-10 bg-islam-deep/85" aria-hidden />
+      <div
+        className="fixed inset-0 -z-10 opacity-25"
+        style={{
+          background:
+            "radial-gradient(circle at 20% 0%, rgba(240,198,74,0.35), transparent 45%), radial-gradient(circle at 80% 100%, rgba(123,61,168,0.4), transparent 50%)",
+        }}
+        aria-hidden
+      />
       {children}
     </div>
   );
