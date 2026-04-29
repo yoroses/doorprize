@@ -2,32 +2,45 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   loadHistory,
+  loadParticipants,
   loadSettings,
   saveHistory,
   type HistoryEntry,
 } from "./storage";
+import { chooseRandomWinners } from "./draw";
+import { chooseRandomItems, type Participant } from "./participants";
 
-function pickRandom(min: number, max: number, exclude: Set<number>): number | null {
-  const pool: number[] = [];
-  for (let n = min; n <= max; n++) {
-    if (!exclude.has(n)) pool.push(n);
-  }
-  if (pool.length === 0) return null;
-  const idx = Math.floor(Math.random() * pool.length);
-  return pool[idx];
-}
+type RevealPhase = "idle" | "rolling" | "flash" | "revealed";
 
 export default function HomePage() {
   const [settings, setSettings] = useState(loadSettings());
+  const [participants, setParticipants] = useState<Participant[]>(loadParticipants());
   const [history, setHistory] = useState<HistoryEntry[]>(loadHistory());
-  const [display, setDisplay] = useState<number | null>(null);
+  const [displayValues, setDisplayValues] = useState<number[]>([]);
+  const [displayParticipants, setDisplayParticipants] = useState<Participant[]>([]);
   const [spinning, setSpinning] = useState(false);
-  const [poolEmpty, setPoolEmpty] = useState(false);
-  const intervalRef = useRef<number | null>(null);
+  const [drawError, setDrawError] = useState("");
+  const [revealPhase, setRevealPhase] = useState<RevealPhase>("idle");
+  const timeoutRef = useRef<number | null>(null);
+
+  function clearTimers() {
+    if (timeoutRef.current) {
+      window.clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }
+
+  function getRollDelay(progress: number) {
+    if (progress < 0.45) return 40;
+    if (progress < 0.75) return 70;
+    if (progress < 0.92) return 110;
+    return 170;
+  }
 
   useEffect(() => {
     const onFocus = () => {
       setSettings(loadSettings());
+      setParticipants(loadParticipants());
       setHistory(loadHistory());
     };
     window.addEventListener("focus", onFocus);
@@ -35,72 +48,177 @@ export default function HomePage() {
   }, []);
 
   const drawnSet = useMemo(
-    () => new Set(history.map((h) => h.number)),
+    () => new Set(history.map((h) => h.participantId)),
     [history]
   );
 
-  const totalInRange = Math.max(0, settings.maxNumber - settings.minNumber + 1);
+  const participantMode = participants.length > 0;
+  const totalInRange = participantMode
+    ? participants.length
+    : Math.max(0, settings.maxNumber - settings.minNumber + 1);
   const remaining = settings.excludePrevious
-    ? Math.max(
-        0,
-        totalInRange -
-          history.filter(
-            (h) => h.number >= settings.minNumber && h.number <= settings.maxNumber
-          ).length
-      )
+    ? Math.max(0, totalInRange - history.length)
     : totalInRange;
 
   function handleDraw() {
     if (spinning) return;
-    const exclude = settings.excludePrevious ? drawnSet : new Set<number>();
-    const winner = pickRandom(settings.minNumber, settings.maxNumber, exclude);
-    if (winner == null) {
-      setPoolEmpty(true);
+    if (participantMode) {
+      const winners = chooseRandomItems(
+        participants,
+        settings.excludePrevious ? drawnSet : new Set<string>(),
+        settings.winnersPerDraw
+      );
+      if (winners.length === 0) {
+        setDrawError("Semua peserta sudah pernah menang. Reset history di admin panel.");
+        return;
+      }
+
+      setDrawError("");
+      setSpinning(true);
+      setRevealPhase("rolling");
+      setDisplayValues([]);
+      setDisplayParticipants([]);
+
+      const start = Date.now();
+      const duration = Math.round(settings.spinDurationSeconds * 1000);
+      const flashAt = duration - 140;
+      const tick = () => {
+        const elapsed = Date.now() - start;
+        if (elapsed >= flashAt && revealPhase !== "flash") {
+          setRevealPhase("flash");
+        }
+        if (elapsed >= duration) {
+          clearTimers();
+          setDisplayParticipants(winners);
+          setSpinning(false);
+          setRevealPhase("revealed");
+          const timestamp = Date.now();
+          const entries: HistoryEntry[] = winners.map((winner, index) => ({
+            participantId: winner.employeeId,
+            participantName: winner.employeeName,
+            dinas: winner.dinas,
+            workLocation: winner.workLocation,
+            timestamp: timestamp + index,
+          }));
+          const next = [...entries, ...history];
+          setHistory(next);
+          saveHistory(next);
+        } else {
+          setDisplayParticipants(
+            chooseRandomItems(participants, new Set(), Math.max(winners.length, 1))
+          );
+          timeoutRef.current = window.setTimeout(
+            tick,
+            getRollDelay(elapsed / duration)
+          );
+        }
+      };
+      tick();
       return;
     }
-    setPoolEmpty(false);
+
+    const winners = chooseRandomWinners(
+      settings.minNumber,
+      settings.maxNumber,
+      new Set(
+        settings.excludePrevious
+          ? history
+              .map((entry) => Number(entry.participantId))
+              .filter((value) => Number.isFinite(value))
+          : []
+      ),
+      settings.winnersPerDraw
+    );
+    if (winners.length === 0) {
+      setDrawError("Semua angka dalam range sudah keluar. Reset history di admin panel.");
+      return;
+    }
+
+    setDrawError("");
     setSpinning(true);
+    setRevealPhase("rolling");
+    setDisplayValues([]);
+    setDisplayParticipants([]);
 
     const start = Date.now();
-    const duration = 2500;
-    intervalRef.current = window.setInterval(() => {
+    const duration = Math.round(settings.spinDurationSeconds * 1000);
+    const flashAt = duration - 140;
+    const tick = () => {
       const elapsed = Date.now() - start;
+      if (elapsed >= flashAt && revealPhase !== "flash") {
+        setRevealPhase("flash");
+      }
       if (elapsed >= duration) {
-        if (intervalRef.current) window.clearInterval(intervalRef.current);
-        intervalRef.current = null;
-        setDisplay(winner);
+        clearTimers();
+        setDisplayValues(winners);
         setSpinning(false);
-        const entry: HistoryEntry = { number: winner, timestamp: Date.now() };
-        const next = [entry, ...history];
+        setRevealPhase("revealed");
+        const timestamp = Date.now();
+        const entries: HistoryEntry[] = winners.map((winner, index) => ({
+          participantId: String(winner),
+          participantName: `Nomor ${winner}`,
+          dinas: "",
+          workLocation: "",
+          timestamp: timestamp + index,
+        }));
+        const next = [...entries, ...history];
         setHistory(next);
         saveHistory(next);
       } else {
         const min = settings.minNumber;
         const max = settings.maxNumber;
-        const n = Math.floor(Math.random() * (max - min + 1)) + min;
-        setDisplay(n);
+        const randomValues = Array.from(
+          { length: Math.max(winners.length, 1) },
+          () => Math.floor(Math.random() * (max - min + 1)) + min
+        );
+        setDisplayValues(randomValues);
+        timeoutRef.current = window.setTimeout(
+          tick,
+          getRollDelay(elapsed / duration)
+        );
       }
-    }, 60);
+    };
+    tick();
   }
 
   useEffect(() => {
     return () => {
-      if (intervalRef.current) window.clearInterval(intervalRef.current);
+      clearTimers();
     };
   }, []);
 
+  useEffect(() => {
+    if (!spinning && revealPhase === "revealed") {
+      const timeout = window.setTimeout(() => {
+        setRevealPhase("idle");
+      }, 900);
+      return () => window.clearTimeout(timeout);
+    }
+  }, [revealPhase, spinning]);
+
   const padWidth = String(settings.maxNumber).length;
   const formatted = (n: number) => String(n).padStart(padWidth, "0");
+  const winnerSlots = Math.max(
+    settings.winnersPerDraw,
+    participantMode ? displayParticipants.length : displayValues.length,
+    1
+  );
+  const multiWinnerMode = winnerSlots > 1;
 
   return (
     <div className="min-h-screen relative text-islam-cream">
       {/* Gradient background */}
       <div
-        className="fixed inset-0 -z-10 bg-gradient-to-br from-islam-deep via-islam-green to-islam-mid"
+        className="fixed inset-0 -z-10 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "url('/background-wa-2026-04-28-230136.jpeg')" }}
         aria-hidden
       />
       <div
-        className="fixed inset-0 -z-10 opacity-30"
+        className="fixed inset-0 -z-10 bg-islam-deep/35"
+        aria-hidden
+      />
+      <div
+        className="fixed inset-0 -z-10 opacity-12"
         style={{
           background:
             "radial-gradient(circle at 20% 0%, rgba(240,198,74,0.35), transparent 45%), radial-gradient(circle at 80% 100%, rgba(123,61,168,0.4), transparent 50%)",
@@ -121,56 +239,148 @@ export default function HomePage() {
         </Link>
       </header>
 
-      {/* Hero - shows the poster art */}
-      <section className="relative px-4 pt-2 pb-6 flex justify-center">
-        <div className="w-full max-w-5xl rounded-3xl overflow-hidden border-2 border-islam-gold/40 shadow-[0_10px_60px_rgba(0,0,0,0.5)]">
-          <img
-            src="/halalbihalal-bg.jpg"
-            alt="Halal Bi Halal — Healing Renewing Winning"
-            className="w-full h-auto block"
-          />
-        </div>
-      </section>
-
       {/* Door prize card */}
       <main className="relative px-4 pb-6 flex flex-col items-center text-center">
-        <div className="text-[10px] sm:text-xs uppercase tracking-[0.5em] text-islam-gold mb-2">
+        <div
+          className="font-display font-black uppercase mb-3"
+          style={{
+            fontSize: "clamp(2rem, 6vw, 4.25rem)",
+            letterSpacing: "0.12em",
+            color: "#f6d777",
+            textShadow:
+              "0 3px 0 rgba(15,23,15,0.72), 0 8px 24px rgba(0,0,0,0.38), 0 0 30px rgba(240,198,74,0.45)",
+            WebkitTextStroke: "1.5px rgba(15,23,15,0.78)",
+          }}
+        >
           ✦ Door Prize ✦
         </div>
         <div className="text-sm uppercase tracking-[0.3em] text-islam-cream/80 mb-4">
-          Range {settings.minNumber} – {settings.maxNumber}
+          {participantMode
+            ? `${participants.length} peserta siap diundi`
+            : `Range ${settings.minNumber} – ${settings.maxNumber}`}
         </div>
+        {settings.winnersPerDraw > 1 && (
+          <div className="mb-4 rounded-full border border-islam-gold/40 bg-islam-gold/10 px-4 py-2 text-xs uppercase tracking-[0.25em] text-islam-gold">
+            Sekali draw akan langsung memilih {settings.winnersPerDraw} pemenang acak
+          </div>
+        )}
 
         <div
-          className={`relative my-2 px-10 py-8 rounded-3xl bg-islam-deep/80 backdrop-blur border-2 ${
+          className={`draw-panel relative my-2 px-10 py-8 rounded-3xl bg-islam-deep/80 backdrop-blur border-2 ${
             spinning ? "border-islam-gold animate-pulse" : "border-islam-gold/60"
+          } ${
+            revealPhase === "rolling" ? "draw-panel--rolling" : ""
+          } ${
+            revealPhase === "flash" ? "draw-panel--flash" : ""
+          } ${
+            revealPhase === "revealed" ? "draw-panel--revealed" : ""
           } shadow-[0_10px_40px_rgba(0,0,0,0.5)]`}
         >
+          <div
+            className={`pointer-events-none absolute inset-0 rounded-3xl ${
+              revealPhase === "flash" ? "draw-flash" : "opacity-0"
+            }`}
+          />
           {/* corner ornaments */}
           <span className="absolute -top-3 -left-3 text-2xl text-islam-purple drop-shadow">✿</span>
           <span className="absolute -top-3 -right-3 text-2xl text-islam-gold drop-shadow">✦</span>
           <span className="absolute -bottom-3 -left-3 text-2xl text-islam-gold drop-shadow">✦</span>
           <span className="absolute -bottom-3 -right-3 text-2xl text-islam-purple drop-shadow">✿</span>
 
-          <div
-            className={`font-display font-black tabular-nums leading-none select-none ${
-              spinning ? "text-islam-gold" : "text-islam-cream"
-            }`}
-            style={{
-              fontSize: "clamp(4rem, 16vw, 11rem)",
-              letterSpacing: "0.05em",
-              textShadow:
-                "0 4px 0 rgba(0,0,0,0.35), 0 0 30px rgba(240,198,74,0.45)",
-              WebkitTextStroke: "2px rgba(0,0,0,0.45)",
-            }}
-          >
-            {display == null ? "—".padEnd(padWidth, "—") : formatted(display)}
-          </div>
+          {multiWinnerMode ? (
+            participantMode ? (
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {(displayParticipants.length > 0
+                  ? displayParticipants
+                  : Array.from({ length: winnerSlots }, () => null)
+                ).map((winner, index) => (
+                  <div
+                    key={winner ? winner.employeeId : `placeholder-${index}`}
+                    className={`winner-card rounded-2xl border border-islam-gold/30 bg-islam-green/30 p-4 text-left shadow-[0_6px_20px_rgba(0,0,0,0.25)] ${
+                      revealPhase === "revealed" ? "winner-card--revealed" : ""
+                    }`}
+                    style={{ animationDelay: `${index * 90}ms` }}
+                  >
+                    <div className="font-display text-2xl text-islam-gold">
+                      {winner ? winner.employeeId : "—".padEnd(6, "—")}
+                    </div>
+                    <div className="mt-1 text-base font-semibold text-islam-cream">
+                      {winner ? winner.employeeName : "Menunggu peserta"}
+                    </div>
+                    <div className="mt-2 text-xs uppercase tracking-[0.2em] text-islam-cream/70">
+                      {winner ? winner.dinas || "Tanpa dinas" : " "}
+                    </div>
+                    <div className="mt-1 text-sm text-islam-cream/70">
+                      {winner ? winner.workLocation || "Tanpa lokasi" : " "}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                {(displayValues.length > 0
+                  ? displayValues
+                  : Array.from({ length: winnerSlots }, () => -1)
+                ).map((winner, index) => (
+                  <div
+                    key={`${winner}-${index}`}
+                    className={`winner-card font-display font-black tabular-nums leading-none select-none ${
+                      spinning ? "text-islam-gold" : "text-islam-cream"
+                    } ${revealPhase === "revealed" ? "winner-card--revealed" : ""}`}
+                    style={{ animationDelay: `${index * 90}ms` }}
+                    {...{
+                      fontSize: "clamp(2.4rem, 8vw, 5rem)",
+                      letterSpacing: "0.05em",
+                      textShadow:
+                        "0 4px 0 rgba(0,0,0,0.35), 0 0 30px rgba(240,198,74,0.45)",
+                      WebkitTextStroke: "2px rgba(0,0,0,0.45)",
+                    }}
+                  >
+                    {winner < 0 ? "—".padEnd(padWidth, "—") : formatted(winner)}
+                  </div>
+                ))}
+              </div>
+            )
+          ) : (
+            participantMode ? (
+              <div className="rounded-2xl border border-islam-gold/30 bg-islam-green/30 p-6 text-left shadow-[0_6px_20px_rgba(0,0,0,0.25)]">
+                <div className="font-display text-4xl text-islam-gold">
+                  {displayParticipants[0]?.employeeId ?? "—".padEnd(6, "—")}
+                </div>
+                <div className="mt-2 text-xl font-semibold text-islam-cream">
+                  {displayParticipants[0]?.employeeName ?? "Menunggu peserta"}
+                </div>
+                <div className="mt-3 text-xs uppercase tracking-[0.2em] text-islam-cream/70">
+                  {displayParticipants[0]?.dinas ?? " "}
+                </div>
+                <div className="mt-1 text-sm text-islam-cream/70">
+                  {displayParticipants[0]?.workLocation ?? " "}
+                </div>
+              </div>
+            ) : (
+              <div
+                className={`winner-card font-display font-black tabular-nums leading-none select-none ${
+                  spinning ? "text-islam-gold" : "text-islam-cream"
+                } ${revealPhase === "revealed" ? "winner-card--revealed" : ""}`}
+                style={{
+                  fontSize: "clamp(4rem, 16vw, 11rem)",
+                  letterSpacing: "0.05em",
+                  textShadow:
+                    "0 4px 0 rgba(0,0,0,0.35), 0 0 30px rgba(240,198,74,0.45)",
+                  WebkitTextStroke: "2px rgba(0,0,0,0.45)",
+                }}
+              >
+                {displayValues.length === 0
+                  ? "—".padEnd(padWidth, "—")
+                  : formatted(displayValues[0])}
+              </div>
+            )
+          )}
         </div>
 
-        {poolEmpty && (
+        {drawError && (
           <div className="text-islam-gold text-sm mt-3">
-            Semua angka dalam range sudah keluar. Reset history di admin panel.
+            {drawError}
           </div>
         )}
 
@@ -179,7 +389,7 @@ export default function HomePage() {
           disabled={spinning || remaining === 0}
           className="mt-6 px-12 py-4 rounded-full bg-gradient-to-r from-islam-gold to-islam-goldDark text-islam-deep font-display font-bold uppercase tracking-[0.25em] text-lg shadow-[0_8px_24px_rgba(0,0,0,0.4)] hover:scale-105 active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 border-2 border-islam-cream/30"
         >
-          {spinning ? "Mengundi..." : "Draw"}
+          {spinning ? "Mengundi..." : settings.winnersPerDraw > 1 ? `Draw ${settings.winnersPerDraw}` : "Draw"}
         </button>
 
         <div className="mt-3 text-xs uppercase tracking-[0.3em] text-islam-cream/70">
@@ -196,7 +406,7 @@ export default function HomePage() {
             <h2 className="font-display text-base uppercase tracking-[0.3em] text-islam-gold">
               ✦ Pemenang ✦
             </h2>
-            <span className="text-xs text-islam-cream/70">{history.length} draws</span>
+            <span className="text-xs text-islam-cream/70">{history.length} winners</span>
           </div>
           {history.length === 0 ? (
             <div className="text-sm text-islam-cream/70 py-6 text-center italic">
@@ -206,16 +416,20 @@ export default function HomePage() {
             <ol className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-7 gap-2 max-h-56 overflow-y-auto pr-1">
               {history.map((h, i) => (
                 <li
-                  key={`${h.timestamp}-${i}`}
-                  className={`rounded-xl px-2 py-2 flex flex-col items-center border ${
+                  key={`${h.participantId}-${h.timestamp}-${i}`}
+                  className={`rounded-xl px-3 py-3 flex flex-col items-start border ${
                     i === 0
                       ? "bg-islam-gold text-islam-deep border-islam-cream"
                       : "bg-islam-deep/80 text-islam-cream border-islam-gold/30"
                   }`}
                 >
                   <span className="font-display font-bold text-lg">
-                    {String(h.number).padStart(padWidth, "0")}
+                    {participantMode ? h.participantId : String(h.participantId).padStart(padWidth, "0")}
                   </span>
+                  <span className="text-xs font-semibold">{h.participantName}</span>
+                  {participantMode && h.dinas && (
+                    <span className="text-[10px] opacity-70">{h.dinas}</span>
+                  )}
                   <span className="text-[10px] opacity-70">
                     {new Date(h.timestamp).toLocaleTimeString()}
                   </span>
